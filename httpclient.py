@@ -41,13 +41,16 @@ class HTTPClient(object):
         return None
 
     def get_code(self, data):
-        return None
+        return int(data.split()[1])
 
     def get_headers(self,data):
-        return None
+        return data.split("\r\n\r\n")[0]
 
     def get_body(self, data):
-        return None
+        if(len(data.split("\r\n\r\n"))>=2):
+            return data.split("\r\n\r\n")[1]
+        else:
+            return None
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -70,11 +73,128 @@ class HTTPClient(object):
     def GET(self, url, args=None):
         code = 500
         body = ""
+
+
+        urlResult = urllib.parse.urlparse(url)
+        path = urlResult.path
+        host = urlResult.hostname
+        port = 80
+        if(urlResult.port):
+            port = urlResult.port
+
+
+
+        request = ""
+
+        #clarify the request method and http version
+        if(path == ""):
+            request += "GET / HTTP/1.1\r\n"
+        else:
+            request += "GET "+path+" HTTP/1.1\r\n"
+
+
+        #hostname
+        request += "Host: "+host+":"+str(port)+"\r\n"
+
+        #accept MIME
+        request += "Accept: */*;q=0.8\r\n"
+
+        #accept language
+        request += "Accept-Language: en-US,en;q=0.5\r\n"
+
+        #encoding
+        request += "Accept-Encoding: *\r\n"
+
+        #connection status
+        # request += "Connection: keep-alive\r\n\r\n"
+        request += "Connection: close\r\n\r\n"
+        self.connect(host,port)
+        self.sendall(request)
+        responseData = self.recvall(self.socket)
+        #print(responseData)
+        self.close()
+
+        # print(self.get_code(responseData))
+        # print(self.get_headers(responseData))
+        # print()
+        # print(self.get_body(responseData))
+        code = self.get_code(responseData)
+        body = self.get_body(responseData)
+
+        #print(f"GET RESULT:\n{self.get_headers(responseData)}\n{self.get_body(responseData)}")
+        print(f"GET RESULT:\n"+responseData)
+
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
         code = 500
         body = ""
+
+        request = ""
+
+        urlResult = urllib.parse.urlparse(url)
+        path = urlResult.path
+        host = urlResult.hostname
+        port = 80
+        if(urlResult.port):
+            port = urlResult.port
+
+        #query the request body
+        requestBody = ""
+        if(args):
+            requestBody = urllib.parse.urlencode(args)
+
+        request = ""
+
+        #clarify the request method and http version
+        if(path == ""):
+            request += "POST / HTTP/1.1\r\n"
+        else:
+            request += "POST "+path+" HTTP/1.1\r\n"
+
+        #hostname
+        request += "Host: "+host+":"+str(port)+"\r\n"
+
+        #Content-Type
+        request += "Content-Type: application/x-www-form-urlencoded\r\n"
+
+        #Content-Length
+        request += "Content-Length: " + str(len(requestBody)) + "\r\n"
+
+        #accept MIME
+        request += "Accept: */*;q=0.8\r\n"
+
+        #accept language
+        request += "Accept-Language: en-US,en;q=0.5\r\n"
+
+        #encoding
+        request += "Accept-Encoding: *\r\n"
+
+        #connection status
+        # request += "Connection: keep-alive\r\n\r\n"
+        request += "Connection: close\r\n\r\n"
+
+        #request body
+        request += requestBody
+
+
+        self.connect(host,port)
+        self.sendall(request)
+        responseData = self.recvall(self.socket)
+        #print(responseData)
+        self.close()
+
+        # print(self.get_code(responseData))
+        # print(self.get_headers(responseData))
+        # print()
+        # print(self.get_body(responseData))
+
+
+        code = self.get_code(responseData)
+        body = self.get_body(responseData)
+
+        #print(f"POST RESULT:\n{self.get_headers(responseData)}\r\n\r\n{self.get_body(responseData)}")
+        print(f"POST RESULT:\n"+responseData)
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
